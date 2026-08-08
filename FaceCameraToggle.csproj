@@ -1,0 +1,13 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <AssemblyName>FaceCameraToggle</AssemblyName>
+    <RootNamespace>FaceCameraToggle</RootNamespace>
+    <Version>1.0.0.0</Version>
+    <Name>Face Camera Toggle</Name>
+    <Author>iwakura</Author>
+    <Description>Makes your character look at the camera (like HaselTweaks' Always Face Camera) and can be toggled on and off with a macro via /afc.</Description>
+    <Punchline>Toggleable always face camera for macros.</Punchline>
+    <Tags>always-face-camera,facecamera,face camera,toggle,macro</Tags>
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+</Project>

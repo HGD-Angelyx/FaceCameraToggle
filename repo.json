@@ -1,0 +1,26 @@
+[
+  {
+    "Author": "HGD-Angelyx",
+    "Name": "Face Camera Toggle",
+    "Punchline": "Toggleable always face camera for macros.",
+    "Description": "Makes your character look at the camera (like HaselTweaks' Always Face Camera) and can be toggled on and off with a macro via /afc.",
+    "Tags": [
+      "always-face-camera",
+      "facecamera",
+      "face camera",
+      "toggle",
+      "macro"
+    ],
+    "InternalName": "FaceCameraToggle",
+    "AssemblyVersion": "1.0.0.0",
+    "RepoUrl": "https://github.com/HGD-Angelyx/FaceCameraToggle",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "DownloadLinkInstall": "https://raw.githubusercontent.com/HGD-Angelyx/FaceCameraToggle/main/FaceCameraToggle.zip",
+    "DownloadLinkTesting": "https://raw.githubusercontent.com/HGD-Angelyx/FaceCameraToggle/main/FaceCameraToggle.zip",
+    "DownloadLinkUpdate": "https://raw.githubusercontent.com/HGD-Angelyx/FaceCameraToggle/main/FaceCameraToggle.zip",
+    "IconUrl": null,
+    "Changelog": null,
+    "AcceptsFeedback": true
+  }
+]
