@@ -16,9 +16,9 @@
     "RepoUrl": "https://github.com/HGD-Angelyx/FaceCameraToggle",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
-    "DownloadLinkInstall": "https://raw.githubusercontent.com/HGD-Angelyx/FaceCameraToggle/main/FaceCameraToggle.zip",
-    "DownloadLinkTesting": "https://raw.githubusercontent.com/HGD-Angelyx/FaceCameraToggle/main/FaceCameraToggle.zip",
-    "DownloadLinkUpdate": "https://raw.githubusercontent.com/HGD-Angelyx/FaceCameraToggle/main/FaceCameraToggle.zip",
+    "DownloadLinkInstall": "https://github.com/HGD-Angelyx/FaceCameraToggle/releases/latest/download/FaceCameraToggle.zip",
+    "DownloadLinkTesting": "https://github.com/HGD-Angelyx/FaceCameraToggle/releases/latest/download/FaceCameraToggle.zip",
+    "DownloadLinkUpdate": "https://github.com/HGD-Angelyx/FaceCameraToggle/releases/latest/download/FaceCameraToggle.zip",
     "IconUrl": null,
     "Changelog": null,
     "AcceptsFeedback": true
