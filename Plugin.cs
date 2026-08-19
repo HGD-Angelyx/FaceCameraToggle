@@ -2,6 +2,7 @@ using System;
 using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Common.Math;
 
@@ -35,7 +36,7 @@ public sealed class Plugin : IDalamudPlugin
 
         _commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggles Always Face Camera. Usage: /afc [on|off|toggle|status]",
+            HelpMessage = "Toggles Always Face Camera. Usage: /afc [on|off|toggle|status|eye|head]",
             ShowInHelp = true,
         });
 
@@ -62,8 +63,14 @@ public sealed class Plugin : IDalamudPlugin
             case "status":
                 PrintStatus();
                 break;
+            case "eye":
+                ToggleEyeOnly();
+                break;
+            case "head":
+                SetEyeOnly(false);
+                break;
             default:
-                _chatGui.PrintError($"Unknown argument '{arguments.Trim()}'. Usage: {CommandName} [on|off|toggle|status]");
+                _chatGui.PrintError($"Unknown argument '{arguments.Trim()}'. Usage: {CommandName} [on|off|toggle|status|eye|head]");
                 break;
         }
     }
@@ -85,9 +92,22 @@ public sealed class Plugin : IDalamudPlugin
         _chatGui.Print(_active ? "Always Face Camera: ON" : "Always Face Camera: OFF");
     }
 
+    private void ToggleEyeOnly()
+    {
+        SetEyeOnly(!_configuration.EyeOnlyMode);
+    }
+
+    private void SetEyeOnly(bool value)
+    {
+        _configuration.EyeOnlyMode = value;
+        _pluginInterface.SavePluginConfig(_configuration);
+        _chatGui.Print(value ? "Mode: Eye tracking only" : "Mode: Head tracking");
+    }
+
     private void PrintStatus()
     {
-        _chatGui.Print(_active ? "Always Face Camera is ON" : "Always Face Camera is OFF");
+        var mode = _configuration.EyeOnlyMode ? "Eye tracking" : "Head tracking";
+        _chatGui.Print(_active ? $"Always Face Camera is ON ({mode})" : "Always Face Camera is OFF");
     }
 
     private unsafe void OnUpdate(IFramework framework)
@@ -126,15 +146,33 @@ public sealed class Plugin : IDalamudPlugin
     private unsafe void EnableFaceCamera()
     {
         var localPlayer = Control.GetLocalPlayer();
-        if (localPlayer != null && (localPlayer->LookAt.FaceCameraFlag & 1) == 0)
+        if (localPlayer == null)
+            return;
+
+        if (_configuration.EyeOnlyMode)
+        {
+            localPlayer->LookAt.BannerCameraFollowFlag = LookAtContainer.BannerCameraFollowFlags.Eyes;
+        }
+        else
+        {
             localPlayer->LookAt.FaceCameraFlag |= 1;
+        }
     }
 
     private unsafe void DisableFaceCamera()
     {
         var localPlayer = Control.GetLocalPlayer();
-        if (localPlayer != null && (localPlayer->LookAt.FaceCameraFlag & 1) == 1)
+        if (localPlayer == null)
+            return;
+
+        if (_configuration.EyeOnlyMode)
+        {
+            localPlayer->LookAt.BannerCameraFollowFlag = LookAtContainer.BannerCameraFollowFlags.None;
+        }
+        else
+        {
             localPlayer->LookAt.FaceCameraFlag &= 0xFE;
+        }
     }
 
     public void Dispose()
