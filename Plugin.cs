@@ -151,7 +151,7 @@ public sealed class Plugin : IDalamudPlugin
 
         if (_configuration.EyeOnlyMode)
         {
-            localPlayer->LookAt.BannerCameraFollowFlag = LookAtContainer.BannerCameraFollowFlags.Eyes;
+            localPlayer->LookAt.FaceCameraFlag |= 1;
         }
         else
         {
@@ -165,14 +165,7 @@ public sealed class Plugin : IDalamudPlugin
         if (localPlayer == null)
             return;
 
-        if (_configuration.EyeOnlyMode)
-        {
-            localPlayer->LookAt.BannerCameraFollowFlag = LookAtContainer.BannerCameraFollowFlags.None;
-        }
-        else
-        {
-            localPlayer->LookAt.FaceCameraFlag &= 0xFE;
-        }
+        localPlayer->LookAt.FaceCameraFlag &= 0xFE;
     }
 
     public void Dispose()
