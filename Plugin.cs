@@ -1,9 +1,7 @@
 using System;
 using Dalamud.Game.Command;
-using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Common.Math;
 
@@ -18,8 +16,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly IChatGui _chatGui;
     private readonly IFramework _framework;
     private readonly Configuration _configuration;
-    private readonly WindowSystem _windowSystem;
-    private readonly ConfigWindow _configWindow;
 
     private bool _active;
 
@@ -37,19 +33,14 @@ public sealed class Plugin : IDalamudPlugin
         _configuration = _pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         _active = _configuration.Enabled;
 
-        _windowSystem = new WindowSystem("FaceCameraToggle");
-        _configWindow = new ConfigWindow(_configuration, this);
-        _windowSystem.AddWindow(_configWindow);
-
         _commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggles Always Face Camera. Usage: /afc [on|off|toggle|status|eye|head|config]",
+            HelpMessage = "Toggles Always Face Camera. Usage: /afc [on|off|toggle|status|eye|head]",
             ShowInHelp = true,
         });
 
         _framework.Update += OnUpdate;
-        _pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
-        _pluginInterface.UiBuilder.OpenConfigUi += ToggleConfig;
+        _pluginInterface.UiBuilder.OpenConfigUi += ToggleActive;
     }
 
     public string Name => "Face Camera Toggle";
@@ -77,11 +68,8 @@ public sealed class Plugin : IDalamudPlugin
             case "head":
                 SetEyeOnly(false);
                 break;
-            case "config":
-                ToggleConfig();
-                break;
             default:
-                _chatGui.PrintError($"Unknown argument '{arguments.Trim()}'. Usage: {CommandName} [on|off|toggle|status|eye|head|config]");
+                _chatGui.PrintError($"Unknown argument '{arguments.Trim()}'. Usage: {CommandName} [on|off|toggle|status|eye|head]");
                 break;
         }
     }
@@ -89,20 +77,6 @@ public sealed class Plugin : IDalamudPlugin
     private void ToggleActive()
     {
         SetActive(!_active);
-    }
-
-    private void ToggleConfig()
-    {
-        _configWindow.Toggle();
-    }
-
-    public void UpdateState()
-    {
-        _active = _configuration.Enabled;
-        _pluginInterface.SavePluginConfig(_configuration);
-
-        if (!_active)
-            DisableFaceCamera();
     }
 
     private void SetActive(bool value)
@@ -154,17 +128,17 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        var player = (Character*)localPlayer;
         var cameraPos = cameraManager->Camera->SceneCamera.Position;
 
         if (_configuration.EyeOnlyMode)
         {
-            EnableEyeCamera(player, cameraPos);
+            localPlayer->LookAt.FaceCameraFlag = 2;
+            localPlayer->LookAt.CameraVector = cameraPos;
         }
         else
         {
-            var playerForwardDirection = new Vector3(MathF.Sin(player->Rotation), 0f, MathF.Cos(player->Rotation));
-            var directionToCamera = Vector3.Normalize(cameraPos - player->Position);
+            var playerForwardDirection = new Vector3(MathF.Sin(localPlayer->Rotation), 0f, MathF.Cos(localPlayer->Rotation));
+            var directionToCamera = Vector3.Normalize(cameraPos - localPlayer->Position);
             var dot = Vector3.Dot(playerForwardDirection, directionToCamera);
 
             if (dot <= 0.0f)
@@ -173,20 +147,9 @@ public sealed class Plugin : IDalamudPlugin
                 return;
             }
 
-            EnableHeadCamera(player, cameraPos);
+            localPlayer->LookAt.FaceCameraFlag |= 1;
+            localPlayer->LookAt.CameraVector = cameraPos;
         }
-    }
-
-    private unsafe void EnableHeadCamera(Character* localPlayer, Vector3 cameraPos)
-    {
-        localPlayer->LookAt.FaceCameraFlag |= 1;
-        localPlayer->LookAt.CameraVector = cameraPos;
-    }
-
-    private unsafe void EnableEyeCamera(Character* localPlayer, Vector3 cameraPos)
-    {
-        localPlayer->LookAt.FaceCameraFlag = 2;
-        localPlayer->LookAt.CameraVector = cameraPos;
     }
 
     private unsafe void DisableFaceCamera()
@@ -195,17 +158,14 @@ public sealed class Plugin : IDalamudPlugin
         if (localPlayer == null)
             return;
 
-        var player = (Character*)localPlayer;
-        player->LookAt.FaceCameraFlag = 0;
+        localPlayer->LookAt.FaceCameraFlag &= 0xFE;
     }
 
     public void Dispose()
     {
-        _pluginInterface.UiBuilder.OpenConfigUi -= ToggleConfig;
-        _pluginInterface.UiBuilder.Draw -= _windowSystem.Draw;
+        _pluginInterface.UiBuilder.OpenConfigUi -= ToggleActive;
         _framework.Update -= OnUpdate;
         _commandManager.RemoveHandler(CommandName);
-        _windowSystem.RemoveWindow(_configWindow);
         DisableFaceCamera();
     }
 }
