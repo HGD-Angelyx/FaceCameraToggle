@@ -10,5 +10,5 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool Enabled { get; set; } = false;
 
-    public bool EyeOnlyMode { get; set; } = false;
+    public bool HeadFrozen { get; set; } = false;
 }

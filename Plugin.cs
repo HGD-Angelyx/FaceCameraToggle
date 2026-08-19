@@ -1,11 +1,9 @@
 using System;
-using System.Runtime.CompilerServices;
 using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Common.Math;
-using static FFXIVClientStructs.FFXIV.Client.Game.Character.LookAtContainer;
 
 namespace FaceCameraToggle;
 
@@ -37,7 +35,7 @@ public sealed class Plugin : IDalamudPlugin
 
         _commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggles Always Face Camera. Usage: /afc [on|off|toggle|status|eye|head]",
+            HelpMessage = "Toggles Always Face Camera. Usage: /afc [on|off|toggle|status|freeze|unfreeze]",
             ShowInHelp = true,
         });
 
@@ -64,14 +62,14 @@ public sealed class Plugin : IDalamudPlugin
             case "status":
                 PrintStatus();
                 break;
-            case "eye":
-                ToggleEyeOnly();
+            case "freeze":
+                SetFreeze(true);
                 break;
-            case "head":
-                SetEyeOnly(false);
+            case "unfreeze":
+                SetFreeze(false);
                 break;
             default:
-                _chatGui.PrintError($"Unknown argument '{arguments.Trim()}'. Usage: {CommandName} [on|off|toggle|status|eye|head]");
+                _chatGui.PrintError($"Unknown argument '{arguments.Trim()}'. Usage: {CommandName} [on|off|toggle|status|freeze|unfreeze]");
                 break;
         }
     }
@@ -93,31 +91,40 @@ public sealed class Plugin : IDalamudPlugin
         _chatGui.Print(_active ? "Always Face Camera: ON" : "Always Face Camera: OFF");
     }
 
-    private void ToggleEyeOnly()
+    private void SetFreeze(bool value)
     {
-        SetEyeOnly(!_configuration.EyeOnlyMode);
-    }
-
-    private void SetEyeOnly(bool value)
-    {
-        _configuration.EyeOnlyMode = value;
+        _configuration.HeadFrozen = value;
         _pluginInterface.SavePluginConfig(_configuration);
-        _chatGui.Print(value ? "Mode: Eye tracking only" : "Mode: Head tracking");
+
+        if (!value)
+            UnfreezeHead();
+
+        _chatGui.Print(value ? "Head: FROZEN" : "Head: UNFROZEN");
     }
 
     private void PrintStatus()
     {
-        var mode = _configuration.EyeOnlyMode ? "Eye tracking" : "Head tracking";
-        _chatGui.Print(_active ? $"Always Face Camera is ON ({mode})" : "Always Face Camera is OFF");
+        var freeze = _configuration.HeadFrozen ? " (head frozen)" : "";
+        _chatGui.Print(_active ? $"Always Face Camera is ON{freeze}" : "Always Face Camera is OFF");
     }
 
     private unsafe void OnUpdate(IFramework framework)
     {
+        var localPlayer = Control.GetLocalPlayer();
+        if (localPlayer == null)
+            return;
+
+        if (_configuration.HeadFrozen)
+        {
+            ref var headParam = ref localPlayer->LookAt.Controller.Params[1];
+            headParam.TargetParam.Type = CharacterLookAtTargetParam.TargetInfoType.None;
+            return;
+        }
+
         if (!_active)
             return;
 
-        var localPlayer = Control.GetLocalPlayer();
-        if (localPlayer == null || localPlayer->InCombat || localPlayer->GetTargetId() != 0xE0000000)
+        if (localPlayer->InCombat || localPlayer->GetTargetId() != 0xE0000000)
         {
             DisableFaceCamera();
             return;
@@ -130,35 +137,18 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        var cameraPos = cameraManager->Camera->SceneCamera.Position;
+        var playerForwardDirection = new Vector3(MathF.Sin(localPlayer->Rotation), 0f, MathF.Cos(localPlayer->Rotation));
+        var directionToCamera = Vector3.Normalize(cameraManager->Camera->SceneCamera.Position - localPlayer->Position);
+        var dot = Vector3.Dot(playerForwardDirection, directionToCamera);
 
-        if (_configuration.EyeOnlyMode)
+        if (dot <= 0.0f)
         {
-            localPlayer->LookAt.Controller.ParamCount = 3;
-
-            ref var eyeParam = ref localPlayer->LookAt.Controller.Params[2];
-            eyeParam.TargetParam.Type = CharacterLookAtTargetParam.TargetInfoType.Unk2;
-            var eyeTargetAddr = (byte*)Unsafe.AsPointer(ref eyeParam.TargetParam);
-            *(Vector3*)(eyeTargetAddr + 0x10) = cameraPos;
-
-            ref var headParam = ref localPlayer->LookAt.Controller.Params[1];
-            headParam.TargetParam.Type = CharacterLookAtTargetParam.TargetInfoType.None;
+            DisableFaceCamera();
+            return;
         }
-        else
-        {
-            var playerForwardDirection = new Vector3(MathF.Sin(localPlayer->Rotation), 0f, MathF.Cos(localPlayer->Rotation));
-            var directionToCamera = Vector3.Normalize(cameraPos - localPlayer->Position);
-            var dot = Vector3.Dot(playerForwardDirection, directionToCamera);
 
-            if (dot <= 0.0f)
-            {
-                DisableFaceCamera();
-                return;
-            }
-
-            localPlayer->LookAt.FaceCameraFlag |= 1;
-            localPlayer->LookAt.CameraVector = cameraPos;
-        }
+        localPlayer->LookAt.FaceCameraFlag |= 1;
+        localPlayer->LookAt.CameraVector = cameraManager->Camera->SceneCamera.Position;
     }
 
     private unsafe void DisableFaceCamera()
@@ -168,9 +158,16 @@ public sealed class Plugin : IDalamudPlugin
             return;
 
         localPlayer->LookAt.FaceCameraFlag &= 0xFE;
+    }
 
-        ref var eyeParam = ref localPlayer->LookAt.Controller.Params[2];
-        eyeParam.TargetParam.Type = CharacterLookAtTargetParam.TargetInfoType.None;
+    private unsafe void UnfreezeHead()
+    {
+        var localPlayer = Control.GetLocalPlayer();
+        if (localPlayer == null)
+            return;
+
+        ref var headParam = ref localPlayer->LookAt.Controller.Params[1];
+        headParam.TargetParam.Type = CharacterLookAtTargetParam.TargetInfoType.GameObjectId;
     }
 
     public void Dispose()
@@ -179,5 +176,6 @@ public sealed class Plugin : IDalamudPlugin
         _framework.Update -= OnUpdate;
         _commandManager.RemoveHandler(CommandName);
         DisableFaceCamera();
+        UnfreezeHead();
     }
 }
