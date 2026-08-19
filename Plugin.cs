@@ -134,9 +134,6 @@ public sealed class Plugin : IDalamudPlugin
 
         if (_configuration.EyeOnlyMode)
         {
-            localPlayer->LookAt.FaceCameraFlag |= 1;
-            localPlayer->LookAt.CameraVector = cameraPos;
-            localPlayer->LookAt.BannerCameraFollowFlag = BannerCameraFollowFlags.Eyes;
             localPlayer->LookAt.Controller.ParamCount = 3;
 
             ref var eyeParam = ref localPlayer->LookAt.Controller.Params[2];
