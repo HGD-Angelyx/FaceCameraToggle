@@ -5,6 +5,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Common.Math;
+using static FFXIVClientStructs.FFXIV.Client.Game.Character.LookAtContainer;
 
 namespace FaceCameraToggle;
 
@@ -133,10 +134,18 @@ public sealed class Plugin : IDalamudPlugin
 
         if (_configuration.EyeOnlyMode)
         {
+            localPlayer->LookAt.FaceCameraFlag |= 1;
+            localPlayer->LookAt.CameraVector = cameraPos;
+            localPlayer->LookAt.BannerCameraFollowFlag = BannerCameraFollowFlags.Eyes;
+            localPlayer->LookAt.Controller.ParamCount = 3;
+
             ref var eyeParam = ref localPlayer->LookAt.Controller.Params[2];
             eyeParam.TargetParam.Type = CharacterLookAtTargetParam.TargetInfoType.Unk2;
             var eyeTargetAddr = (byte*)Unsafe.AsPointer(ref eyeParam.TargetParam);
             *(Vector3*)(eyeTargetAddr + 0x10) = cameraPos;
+
+            ref var headParam = ref localPlayer->LookAt.Controller.Params[1];
+            headParam.TargetParam.Type = CharacterLookAtTargetParam.TargetInfoType.None;
         }
         else
         {

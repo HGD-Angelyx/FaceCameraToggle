@@ -12,7 +12,7 @@
       "macro"
     ],
     "InternalName": "FaceCameraToggle",
-    "AssemblyVersion": "1.8.0.0",
+    "AssemblyVersion": "1.9.0.0",
     "RepoUrl": "https://github.com/HGD-Angelyx/FaceCameraToggle",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
