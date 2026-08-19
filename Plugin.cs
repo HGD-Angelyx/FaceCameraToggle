@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -154,33 +155,44 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        var playerForwardDirection = new Vector3(MathF.Sin(localPlayer->Rotation), 0f, MathF.Cos(localPlayer->Rotation));
-        var directionToCamera = Vector3.Normalize(cameraManager->Camera->SceneCamera.Position - localPlayer->Position);
-        var dot = Vector3.Dot(playerForwardDirection, directionToCamera);
-
-        if (dot <= 0.0f)
-        {
-            DisableFaceCamera();
-            return;
-        }
-
-        EnableFaceCamera();
-        localPlayer->LookAt.CameraVector = cameraManager->Camera->SceneCamera.Position;
-    }
-
-    private unsafe void EnableFaceCamera()
-    {
-        var localPlayer = Control.GetLocalPlayer();
-        if (localPlayer == null)
-            return;
+        var player = (Character*)localPlayer;
+        var cameraPos = cameraManager->Camera->SceneCamera.Position;
 
         if (_configuration.EyeOnlyMode)
         {
-            localPlayer->LookAt.BannerCameraFollowFlag = LookAtContainer.BannerCameraFollowFlags.Eyes;
+            EnableEyeCamera(player, cameraPos);
         }
         else
         {
-            localPlayer->LookAt.FaceCameraFlag |= 1;
+            var playerForwardDirection = new Vector3(MathF.Sin(player->Rotation), 0f, MathF.Cos(player->Rotation));
+            var directionToCamera = Vector3.Normalize(cameraPos - player->Position);
+            var dot = Vector3.Dot(playerForwardDirection, directionToCamera);
+
+            if (dot <= 0.0f)
+            {
+                DisableFaceCamera();
+                return;
+            }
+
+            EnableHeadCamera(player, cameraPos);
+        }
+    }
+
+    private unsafe void EnableHeadCamera(Character* localPlayer, Vector3 cameraPos)
+    {
+        localPlayer->LookAt.FaceCameraFlag |= 1;
+        localPlayer->LookAt.CameraVector = cameraPos;
+    }
+
+    private unsafe void EnableEyeCamera(Character* localPlayer, Vector3 cameraPos)
+    {
+        localPlayer->LookAt.FaceCameraFlag &= 0xFE;
+
+        fixed (CharacterLookAtControlParam* eyeParam = &localPlayer->LookAt.Controller.Params[2])
+        {
+            var targetParam = &eyeParam->TargetParam;
+            targetParam->Type = CharacterLookAtTargetParam.TargetInfoType.Unk2;
+            Unsafe.AsRef<Vector3>(&targetParam->TargetId) = cameraPos;
         }
     }
 
@@ -190,13 +202,14 @@ public sealed class Plugin : IDalamudPlugin
         if (localPlayer == null)
             return;
 
-        if (_configuration.EyeOnlyMode)
+        var player = (Character*)localPlayer;
+        player->LookAt.FaceCameraFlag &= 0xFE;
+
+        fixed (CharacterLookAtControlParam* eyeParam = &player->LookAt.Controller.Params[2])
         {
-            localPlayer->LookAt.BannerCameraFollowFlag = LookAtContainer.BannerCameraFollowFlags.None;
-        }
-        else
-        {
-            localPlayer->LookAt.FaceCameraFlag &= 0xFE;
+            var targetParam = &eyeParam->TargetParam;
+            targetParam->Type = CharacterLookAtTargetParam.TargetInfoType.None;
+            Unsafe.AsRef<Vector3>(&targetParam->TargetId) = default;
         }
     }
 
