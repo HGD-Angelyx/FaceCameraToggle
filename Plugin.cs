@@ -1,11 +1,10 @@
 using System;
-using System.Runtime.CompilerServices;
 using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Common.Math;
-using static FFXIVClientStructs.FFXIV.Client.Game.Control.CharacterLookAtTargetParam;
+using static FFXIVClientStructs.FFXIV.Client.Game.Character.LookAtContainer;
 
 namespace FaceCameraToggle;
 
@@ -136,14 +135,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             localPlayer->LookAt.FaceCameraFlag |= 1;
             localPlayer->LookAt.CameraVector = cameraPos;
-
-            ref var headParam = ref localPlayer->LookAt.Controller.Params[1];
-            headParam.TargetParam.Type = TargetInfoType.None;
-
-            ref var eyeParam = ref localPlayer->LookAt.Controller.Params[2];
-            eyeParam.TargetParam.Type = TargetInfoType.Unk2;
-            var eyeTargetAddr = (byte*)Unsafe.AsPointer(ref eyeParam.TargetParam);
-            *(Vector3*)(eyeTargetAddr + 0x10) = cameraPos;
+            localPlayer->LookAt.BannerCameraFollowFlag = BannerCameraFollowFlags.Eyes;
         }
         else
         {
@@ -159,6 +151,7 @@ public sealed class Plugin : IDalamudPlugin
 
             localPlayer->LookAt.FaceCameraFlag |= 1;
             localPlayer->LookAt.CameraVector = cameraPos;
+            localPlayer->LookAt.BannerCameraFollowFlag = BannerCameraFollowFlags.Head;
         }
     }
 
@@ -169,6 +162,7 @@ public sealed class Plugin : IDalamudPlugin
             return;
 
         localPlayer->LookAt.FaceCameraFlag &= 0xFE;
+        localPlayer->LookAt.BannerCameraFollowFlag = BannerCameraFollowFlags.None;
     }
 
     public void Dispose()
