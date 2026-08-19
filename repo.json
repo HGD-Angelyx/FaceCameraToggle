@@ -12,7 +12,7 @@
       "macro"
     ],
     "InternalName": "FaceCameraToggle",
-    "AssemblyVersion": "1.3.0.0",
+    "AssemblyVersion": "1.4.0.0",
     "RepoUrl": "https://github.com/HGD-Angelyx/FaceCameraToggle",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
@@ -20,7 +20,7 @@
     "DownloadLinkTesting": "https://github.com/HGD-Angelyx/FaceCameraToggle/releases/latest/download/FaceCameraToggle.zip",
     "DownloadLinkUpdate": "https://github.com/HGD-Angelyx/FaceCameraToggle/releases/latest/download/FaceCameraToggle.zip",
     "IconUrl": null,
-    "Changelog": "Fixed eye-only mode: now uses CharacterLookAtController eye target instead of head-level FaceCameraFlag",
+    "Changelog": "Simplified eye-only mode using FaceCameraFlag bit 1, removed Controller access that caused load failures",
     "AcceptsFeedback": true
   }
 ]

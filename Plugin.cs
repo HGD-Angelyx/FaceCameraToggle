@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -186,14 +185,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private unsafe void EnableEyeCamera(Character* localPlayer, Vector3 cameraPos)
     {
-        localPlayer->LookAt.FaceCameraFlag &= 0xFE;
-
-        fixed (CharacterLookAtControlParam* eyeParam = &localPlayer->LookAt.Controller.Params[2])
-        {
-            var targetParam = &eyeParam->TargetParam;
-            targetParam->Type = CharacterLookAtTargetParam.TargetInfoType.Unk2;
-            Unsafe.AsRef<Vector3>(&targetParam->TargetId) = cameraPos;
-        }
+        localPlayer->LookAt.FaceCameraFlag = 2;
+        localPlayer->LookAt.CameraVector = cameraPos;
     }
 
     private unsafe void DisableFaceCamera()
@@ -203,14 +196,7 @@ public sealed class Plugin : IDalamudPlugin
             return;
 
         var player = (Character*)localPlayer;
-        player->LookAt.FaceCameraFlag &= 0xFE;
-
-        fixed (CharacterLookAtControlParam* eyeParam = &player->LookAt.Controller.Params[2])
-        {
-            var targetParam = &eyeParam->TargetParam;
-            targetParam->Type = CharacterLookAtTargetParam.TargetInfoType.None;
-            Unsafe.AsRef<Vector3>(&targetParam->TargetId) = default;
-        }
+        player->LookAt.FaceCameraFlag = 0;
     }
 
     public void Dispose()
