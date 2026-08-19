@@ -1,5 +1,6 @@
 using System;
 using Dalamud.Game.Command;
+using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
@@ -17,6 +18,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly IChatGui _chatGui;
     private readonly IFramework _framework;
     private readonly Configuration _configuration;
+    private readonly WindowSystem _windowSystem;
+    private readonly ConfigWindow _configWindow;
 
     private bool _active;
 
@@ -34,14 +37,19 @@ public sealed class Plugin : IDalamudPlugin
         _configuration = _pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         _active = _configuration.Enabled;
 
+        _windowSystem = new WindowSystem("FaceCameraToggle");
+        _configWindow = new ConfigWindow(_configuration, this);
+        _windowSystem.AddWindow(_configWindow);
+
         _commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggles Always Face Camera. Usage: /afc [on|off|toggle|status|eye|head]",
+            HelpMessage = "Toggles Always Face Camera. Usage: /afc [on|off|toggle|status|eye|head|config]",
             ShowInHelp = true,
         });
 
         _framework.Update += OnUpdate;
-        _pluginInterface.UiBuilder.OpenConfigUi += ToggleActive;
+        _pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
+        _pluginInterface.UiBuilder.OpenConfigUi += ToggleConfig;
     }
 
     public string Name => "Face Camera Toggle";
@@ -69,8 +77,11 @@ public sealed class Plugin : IDalamudPlugin
             case "head":
                 SetEyeOnly(false);
                 break;
+            case "config":
+                ToggleConfig();
+                break;
             default:
-                _chatGui.PrintError($"Unknown argument '{arguments.Trim()}'. Usage: {CommandName} [on|off|toggle|status|eye|head]");
+                _chatGui.PrintError($"Unknown argument '{arguments.Trim()}'. Usage: {CommandName} [on|off|toggle|status|eye|head|config]");
                 break;
         }
     }
@@ -78,6 +89,20 @@ public sealed class Plugin : IDalamudPlugin
     private void ToggleActive()
     {
         SetActive(!_active);
+    }
+
+    private void ToggleConfig()
+    {
+        _configWindow.Toggle();
+    }
+
+    public void UpdateState()
+    {
+        _active = _configuration.Enabled;
+        _pluginInterface.SavePluginConfig(_configuration);
+
+        if (!_active)
+            DisableFaceCamera();
     }
 
     private void SetActive(bool value)
@@ -151,7 +176,7 @@ public sealed class Plugin : IDalamudPlugin
 
         if (_configuration.EyeOnlyMode)
         {
-            localPlayer->LookAt.FaceCameraFlag |= 1;
+            localPlayer->LookAt.BannerCameraFollowFlag = LookAtContainer.BannerCameraFollowFlags.Eyes;
         }
         else
         {
@@ -165,14 +190,23 @@ public sealed class Plugin : IDalamudPlugin
         if (localPlayer == null)
             return;
 
-        localPlayer->LookAt.FaceCameraFlag &= 0xFE;
+        if (_configuration.EyeOnlyMode)
+        {
+            localPlayer->LookAt.BannerCameraFollowFlag = LookAtContainer.BannerCameraFollowFlags.None;
+        }
+        else
+        {
+            localPlayer->LookAt.FaceCameraFlag &= 0xFE;
+        }
     }
 
     public void Dispose()
     {
-        _pluginInterface.UiBuilder.OpenConfigUi -= ToggleActive;
+        _pluginInterface.UiBuilder.OpenConfigUi -= ToggleConfig;
+        _pluginInterface.UiBuilder.Draw -= _windowSystem.Draw;
         _framework.Update -= OnUpdate;
         _commandManager.RemoveHandler(CommandName);
+        _windowSystem.RemoveWindow(_configWindow);
         DisableFaceCamera();
     }
 }
